@@ -42,6 +42,7 @@ jobs:
       DATABASE_URL: postgresql://postgres:postgres@127.0.0.1:5432/distributor_platform_test_v104
       INTEGRATION_DB_REQUIRED: 'true'
       INTEGRATION_DB_NAME: distributor_platform_test_v104
+      INTEGRATION_RESTORE_DB_NAME: distributor_restore_smoke_v104
     steps:
       - uses: actions/checkout@v6
       - uses: actions/setup-node@v7
