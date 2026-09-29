@@ -1,0 +1,99 @@
+name: production-gate
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+  workflow_run:
+    workflows: [runtime-gate]
+    types: [completed]
+
+permissions:
+  contents: read
+  actions: read
+
+concurrency:
+  group: production-gate-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  current-release-contract:
+    if: ${{ github.event_name != 'workflow_run' }}
+    name: Current release evidence contract
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '22.x'
+          package-manager-cache: false
+      - name: Verify current release contract
+        working-directory: backend
+        run: npm run verify:current-release
+
+  production-config:
+    if: ${{ github.event_name != 'workflow_run' }}
+    needs: [current-release-contract]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '22.x'
+          package-manager-cache: false
+      - name: Production configuration preflight
+        working-directory: backend
+        env:
+          NODE_ENV: production
+          DATABASE_URL: ${{ secrets.CI_DATABASE_URL }}
+          JWT_ACCESS_SECRET: ${{ secrets.CI_JWT_ACCESS_SECRET }}
+          JWT_ISSUER: distributor-platform
+          JWT_AUDIENCE: distributor-mobile
+          APP_ORIGINS: https://ci.example.invalid
+          PLATFORM_ADMIN_KEY: ${{ secrets.CI_PLATFORM_ADMIN_KEY }}
+          RECOVERY_DELIVERY_MODE: webhook
+          RECOVERY_DELIVERY_WEBHOOK_URL: https://ci.example.invalid/recovery
+          RECOVERY_DELIVERY_WEBHOOK_SECRET: ${{ secrets.CI_RECOVERY_WEBHOOK_SECRET }}
+          HEALTH_METRICS_KEY: ${{ secrets.CI_HEALTH_METRICS_KEY }}
+        run: npm run preflight:production
+
+  runtime-evidence-promotion:
+    name: Promote exact runtime certification
+    if: ${{ github.event_name == 'workflow_run' && github.event.workflow_run.conclusion == 'success' }}
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      actions: read
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          ref: ${{ github.event.workflow_run.head_sha }}
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '22.x'
+          package-manager-cache: false
+      - name: Verify exact source release identity
+        working-directory: backend
+        run: npm run verify:current-release
+      - name: Download runtime certification from exact workflow run
+        uses: actions/download-artifact@v5
+        with:
+          name: distributor-runtime-release-certification-${{ github.event.workflow_run.head_sha }}
+          path: runtime-cert-artifact
+          github-token: ${{ github.token }}
+          repository: ${{ github.repository }}
+          run-id: ${{ github.event.workflow_run.id }}
+      - name: Verify cross-workflow runtime certification
+        working-directory: backend
+        env:
+          GITHUB_EVENT_NAME: workflow_run
+          PROMOTION_WORKFLOW_NAME: runtime-gate
+          PROMOTION_RUN_ID: ${{ github.event.workflow_run.id }}
+          PROMOTION_HEAD_SHA: ${{ github.event.workflow_run.head_sha }}
+          PROMOTION_CONCLUSION: ${{ github.event.workflow_run.conclusion }}
+          RUNTIME_CERT_ARTIFACT_ROOT: ../runtime-cert-artifact
+        run: npm run verify:runtime-promotion
+      - name: Verify tracked production lockfile at promoted commit
+        run: git ls-files --error-unmatch backend/package-lock.json
+      - name: Promotion result
+        run: echo "Runtime certification promoted for ${{ github.event.workflow_run.head_sha }} from runtime-gate run ${{ github.event.workflow_run.id }}"
