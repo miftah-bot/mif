@@ -69,26 +69,6 @@ jobs:
       - name: Run backend tests
         working-directory: backend
         run: npm test
-      - name: Create runtime certification
-        run: |
-          mkdir -p runtime-certification
-          cat > runtime-certification/certification.json <<EOF
-          {
-            "schema": "distributor-runtime-release-certification/v104",
-            "workflow_name": "runtime-gate",
-            "run_id": "${{ github.run_id }}",
-            "head_sha": "${{ github.sha }}",
-            "release_version": "0.104.0",
-            "release_build": "104",
-            "conclusion": "success"
-          }
-          EOF
-      - name: Upload runtime certification
-        uses: actions/upload-artifact@v4
-        with:
-          name: distributor-runtime-release-certification-${{ github.sha }}
-          path: runtime-certification/certification.json
-          if-no-files-found: error
 
   mobile-runtime:
     runs-on: ubuntu-latest
@@ -118,3 +98,34 @@ jobs:
         run: |
           test "${{ needs.backend-runtime.result }}" = success
           test "${{ needs.mobile-runtime.result }}" = success
+      - name: Create runtime certification
+        run: |
+          mkdir -p runtime-certification
+          cat > runtime-certification/release-certification-current.json <<EOF
+          {
+            "schemaVersion": 1,
+            "status": "PASS",
+            "release": {
+              "version": "0.104.0",
+              "build": 104
+            },
+            "ci": {
+              "githubActions": true,
+              "workflow": "runtime-gate",
+              "runId": "${{ github.run_id }}",
+              "sha": "${{ github.sha }}"
+            },
+            "upstream": {
+              "backendRuntime": "${{ needs.backend-runtime.result }}",
+              "mobileRuntime": "${{ needs.mobile-runtime.result }}",
+              "closureContract": "success"
+            },
+            "productionEligible": true
+          }
+          EOF
+      - name: Upload runtime certification
+        uses: actions/upload-artifact@v4
+        with:
+          name: distributor-runtime-release-certification-${{ github.sha }}
+          path: runtime-certification/release-certification-current.json
+          if-no-files-found: error
