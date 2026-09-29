@@ -1,5 +1,6 @@
 name: runtime-gate
 # V104 runtime gate: release contract + backend + mobile evidence.
+# Promotion path consumes the exact artifact from this run.
 
 on:
   workflow_dispatch:
