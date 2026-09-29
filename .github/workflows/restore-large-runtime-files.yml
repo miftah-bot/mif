@@ -20,7 +20,23 @@ jobs:
             ('SCHEMA_B64','backend/prisma/schema.prisma',25567,'d7267df1805f7b426992324b158e6a52d2a910840bc67705626b6b54e56b906b'),
             ('BASELINE_B64','backend/prisma/migrations/20260916000100_production_baseline/migration.sql',29914,'f8d39b504a1315c521f6333f613db1d76333761d119b4a7cca45416b12862168')]
           for key,path,size,want in specs:
-              m=re.search(r'^[ ]{10}'+key+r': ([A-Za-z0-9+/=]+)$',text,re.M)
+              m=re.search(r'^\s*'+key+r':\s*([A-Za-z0-9+/=]+),text,re.M)
+              if not m: raise SystemExit(f'missing {key}')
+              data=gzip.decompress(base64.b64decode(m.group(1)))
+              got=hashlib.sha256(data).hexdigest()
+              print(key, len(data), got)
+              if len(data)!=size or got!=want: raise SystemExit(f'checksum mismatch for {key}')
+              pathlib.Path(path).parent.mkdir(parents=True,exist_ok=True)
+              pathlib.Path(path).write_bytes(data)
+          PY
+      - name: Commit restored files
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add backend/prisma/schema.prisma backend/prisma/migrations/20260916000100_production_baseline/migration.sql
+          git commit -m "chore(v104): restore exact prisma schema and baseline [restore-large-files]"
+          git push
+,text,re.M)
               if not m: raise SystemExit(f'missing {key}')
               data=gzip.decompress(base64.b64decode(m.group(1)))
               got=hashlib.sha256(data).hexdigest()
