@@ -1,0 +1,37 @@
+name: lockfile-recovery
+
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - backend/package.json
+      - backend/package-lock.json
+      - .github/workflows/lockfile-recovery.yml
+
+permissions:
+  contents: read
+
+jobs:
+  lockfile:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22.x
+          package-manager-cache: false
+      - name: Generate candidate lockfile
+        working-directory: backend
+        run: npm install --package-lock-only --ignore-scripts --no-audit --no-fund
+      - name: Validate candidate lockfile
+        working-directory: backend
+        run: node scripts/verify-dependency-contract.js
+      - name: Verify clean install from candidate
+        working-directory: backend
+        run: npm ci --ignore-scripts --no-audit --no-fund
+      - name: Upload candidate lockfile
+        uses: actions/upload-artifact@v4
+        with:
+          name: backend-package-lock-${{ github.sha }}
+          path: backend/package-lock.json
+          if-no-files-found: error
