@@ -57,13 +57,15 @@ if (cert) {
   if (cert.schemaVersion !== 1) fail('runtime certification schemaVersion must be 1');
   if (cert.status !== 'PASS') block(`runtime certification status=${cert.status}`);
   if (cert.release?.version !== pkg.version) fail('runtime certification release version mismatch');
+  if (cert.release?.build !== 104) fail('runtime certification release build mismatch');
   if (cert.ci?.githubActions !== true) fail('runtime certification is not marked as GitHub Actions evidence');
+  if (cert.ci?.workflow !== expectedWorkflow) fail('runtime certification workflow mismatch');
   if (expectedRunId && cert.ci?.runId !== expectedRunId) fail('runtime certification run ID mismatch');
   if (expectedSha && cert.ci?.sha !== expectedSha) fail('runtime certification source SHA mismatch');
   if (cert.upstream?.backendRuntime !== 'success') block(`backend runtime result=${cert.upstream?.backendRuntime || 'missing'}`);
   if (cert.upstream?.mobileRuntime !== 'success') block(`mobile runtime result=${cert.upstream?.mobileRuntime || 'missing'}`);
   if (cert.upstream?.closureContract !== 'success') block(`closure contract result=${cert.upstream?.closureContract || 'missing'}`);
-  if (cert.productionEligible !== false && cert.productionEligible !== true) fail('runtime certification productionEligible must be boolean');
+  if (cert.productionEligible !== true) block('runtime certification is not production eligible');
 }
 
 if (errors.length) {
