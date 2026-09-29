@@ -60,7 +60,7 @@ export async function createConfiguredApp(): Promise<INestApplication> {
     next();
   });
 
-  const origins = (config.get('APP_ORIGINS') ?? '').split(',').map(x => x.trim()).filter(Boolean);
+  const origins = (config.get('APP_ORIGINS') ?? '').split(',').map((x: string) => x.trim()).filter(Boolean);
   app.setGlobalPrefix('api/v1');
   app.enableCors({ origin: origins.length ? origins : false, credentials: true });
   app.useGlobalPipes(new ValidationPipe({ whitelist: true, forbidNonWhitelisted: true, transform: true }));
