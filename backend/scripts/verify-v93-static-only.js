@@ -1,0 +1,18 @@
+const fs=require('node:fs'); const path=require('node:path');
+const root=path.resolve(__dirname,'..'); const project=path.resolve(root,'..'); const checks=[];
+const add=(name,pass,detail='')=>checks.push({name,pass:Boolean(pass),detail});
+const read=f=>{try{return fs.readFileSync(f,'utf8')}catch{return ''}};
+const schema=read(path.join(root,'prisma','schema.prisma')); const factory=read(path.join(root,'src','app-factory.ts'));
+const pkg=JSON.parse(read(path.join(root,'package.json')));
+add('Node 22 engine',pkg.engines?.node==='22.x',String(pkg.engines?.node||'missing'));
+add('.env ignored',read(path.join(project,'.gitignore')).split(/\r?\n/).includes('.env'));
+add('tenant-safe role relation',/fields:\s*\[tenantId, userId\][\s\S]*references:\s*\[tenantId, id\]/.test(schema));
+add('auth session revocation',/revokedAt\s+DateTime\?/.test(schema));
+add('hashed reset token',/tokenHash\s+String/.test(schema));
+add('CORS allowlist',/origin: origins\.length \? origins : false/.test(factory));
+add('rate limiter',/new ApiRateLimiter\(/.test(factory));
+add('secure headers',/X-Frame-Options|X-Content-Type-Options/.test(factory));
+add('lockfile-aware dependency gate',/package-lock\.json/.test(read(path.join(root,'scripts','verify-dependency-contract.js'))));
+for(const c of checks) console.log((c.pass?'PASS':'FAIL')+' '+c.name+(c.detail?' — '+c.detail:''));
+console.log('V93 static-only: '+(checks.every(c=>c.pass)?'PASS':'FAIL')+' — '+checks.length+' checks');
+process.exit(checks.every(c=>c.pass)?0:1);
