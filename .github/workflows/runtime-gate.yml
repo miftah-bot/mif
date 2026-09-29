@@ -1,0 +1,118 @@
+name: runtime-gate
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - 'backend/**'
+      - 'mobile/**'
+      - 'docker-compose*.yml'
+      - '.github/workflows/runtime-gate.yml'
+      - 'VERSION'
+      - 'RELEASE_BUILD'
+      - 'backend/VERSION'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: runtime-gate-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  backend-runtime:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: distributor_platform_test_v104
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd="pg_isready -U postgres -d distributor_platform_test_v104"
+          --health-interval=5s
+          --health-timeout=5s
+          --health-retries=20
+    env:
+      NODE_ENV: test
+      DATABASE_URL: postgresql://postgres:postgres@127.0.0.1:5432/distributor_platform_test_v104
+      INTEGRATION_DB_REQUIRED: 'true'
+      INTEGRATION_DB_NAME: distributor_platform_test_v104
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '22.x'
+          cache: npm
+          cache-dependency-path: backend/package-lock.json
+      - name: Verify release identity
+        working-directory: backend
+        run: npm run verify:current-release
+      - name: Generate candidate lockfile
+        working-directory: backend
+        run: npm install --package-lock-only --ignore-scripts --no-audit --no-fund
+      - name: Verify dependency contract
+        working-directory: backend
+        run: npm run verify:dependencies
+      - name: Install exact dependencies
+        working-directory: backend
+        run: npm ci --ignore-scripts --no-audit --no-fund
+      - name: Build backend
+        working-directory: backend
+        run: npm run build
+      - name: Run backend tests
+        working-directory: backend
+        run: npm test
+      - name: Create runtime certification
+        run: |
+          mkdir -p runtime-certification
+          cat > runtime-certification/certification.json <<EOF
+          {
+            "schema": "distributor-runtime-release-certification/v104",
+            "workflow_name": "runtime-gate",
+            "run_id": "${{ github.run_id }}",
+            "head_sha": "${{ github.sha }}",
+            "release_version": "0.104.0",
+            "release_build": "104",
+            "conclusion": "success"
+          }
+          EOF
+      - name: Upload runtime certification
+        uses: actions/upload-artifact@v4
+        with:
+          name: distributor-runtime-release-certification-${{ github.sha }}
+          path: runtime-certification/certification.json
+          if-no-files-found: error
+
+  mobile-runtime:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+      - name: Flutter dependencies
+        working-directory: mobile
+        run: flutter pub get
+      - name: Analyze
+        working-directory: mobile
+        run: flutter analyze
+      - name: Test
+        working-directory: mobile
+        run: flutter test
+
+  runtime-decision:
+    if: ${{ always() }}
+    runs-on: ubuntu-latest
+    needs: [backend-runtime, mobile-runtime]
+    steps:
+      - uses: actions/checkout@v6
+      - name: Require both runtime gates
+        run: |
+          test "${{ needs.backend-runtime.result }}" = success
+          test "${{ needs.mobile-runtime.result }}" = success
