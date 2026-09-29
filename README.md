@@ -19,7 +19,7 @@ V104 adds cross-workflow runtime certification promotion to the current release 
 The platform supports multi-role authorization. A seller/cashier can also hold the administrator role through role assignments while remaining tenant/location scoped.
 
 ## Release verification
-A complete runtime release requires real CI execution for dependency installation, PostgreSQL/Prisma, backend build/tests, HTTP E2E, Docker, Flutter tests, and Android App Bundle generation. A committed and tracked backend/package-lock.json is required for production release closure.
+A complete runtime release requires real CI execution for dependency installation, PostgreSQL/Prisma, backend build/tests, HTTP E2E, Docker, Flutter tests, and Android App Bundle generation. The generic current-release verifier is `npm run verify:current-release`. A committed and tracked backend/package-lock.json is required for production release closure.
 
 ## Honest status
 The local workspace does not contain a fabricated package-lockfile or fabricated runtime artifacts. CI-only runtime evidence is reported as BLOCKED until the real toolchains and network-backed dependency resolution execute.
