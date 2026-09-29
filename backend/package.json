@@ -13,7 +13,11 @@
     "verify:lockfile:committed": "node scripts/verify-lockfile-committed.js",
     "verify:runtime-closure": "node scripts/verify-runtime-closure.js",
     "verify:v104": "node scripts/verify-v104-runtime-promotion.js",
-    "verify:runtime-promotion": "node scripts/verify-runtime-promotion.js"
+    "verify:runtime-promotion": "node scripts/verify-runtime-promotion.js",
+    "verify:all": "npm run verify:current-release && npm run verify:v104",
+    "verify:ci": "npm run verify:current-release && npm run verify:v104",
+    "verify:runtime": "npm run verify:ci && npm run build && npm test",
+    "verify:release": "npm run verify:runtime && npm run verify:lockfile:committed"
   },
   "dependencies": {
     "@nestjs/common": "^11.0.0",
@@ -38,5 +42,5 @@
     "typescript": "^5.7.2",
     "@types/node": "^22.0.0"
   },
-  "engines": { "node": "22.x" }
+  "engines": {"node": "22.x"}
 }
