@@ -12,6 +12,7 @@ on:
       - 'VERSION'
       - 'RELEASE_BUILD'
       - 'backend/VERSION'
+      - 'README.md'
 
 permissions:
   contents: read
