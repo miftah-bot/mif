@@ -1,0 +1,42 @@
+{
+  "name": "distributor-platform-api",
+  "version": "0.104.0",
+  "private": true,
+  "scripts": {
+    "start:dev": "nest start --watch",
+    "build": "nest build",
+    "start": "node dist/main.js",
+    "prisma:generate": "prisma generate",
+    "prisma:migrate": "prisma migrate dev",
+    "test": "jest --runInBand",
+    "verify:current-release": "node scripts/verify-current-release.js",
+    "verify:lockfile:committed": "node scripts/verify-lockfile-committed.js",
+    "verify:runtime-closure": "node scripts/verify-runtime-closure.js",
+    "verify:v104": "node scripts/verify-v104-runtime-promotion.js",
+    "verify:runtime-promotion": "node scripts/verify-runtime-promotion.js"
+  },
+  "dependencies": {
+    "@nestjs/common": "^11.0.0",
+    "@nestjs/config": "^4.0.0",
+    "@nestjs/core": "^11.0.0",
+    "@nestjs/jwt": "^11.0.0",
+    "@prisma/client": "^6.0.0",
+    "bcrypt": "^5.1.1",
+    "class-transformer": "^0.5.1",
+    "class-validator": "^0.14.1",
+    "decimal.js": "^10.4.3",
+    "reflect-metadata": "^0.2.2",
+    "rxjs": "^7.8.1"
+  },
+  "devDependencies": {
+    "@nestjs/cli": "^11.0.0",
+    "@types/bcrypt": "^5.0.2",
+    "@types/jest": "^29.5.14",
+    "jest": "^29.7.0",
+    "prisma": "^6.0.0",
+    "ts-jest": "^29.2.5",
+    "typescript": "^5.7.2",
+    "@types/node": "^22.0.0"
+  },
+  "engines": { "node": "22.x" }
+}
