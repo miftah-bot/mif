@@ -1,0 +1,714 @@
+generator client { provider = "prisma-client-js" }
+datasource db { provider = "postgresql" url = env("DATABASE_URL") }
+
+enum LocationType { WAREHOUSE SALES }
+enum SaleStatus { DRAFT CONFIRMED WAREHOUSE_PENDING COMPLETED PARTIALLY_DELIVERED CANCELLED }
+enum PaymentMethod { CASH BANK TELEBIRR OTHER }
+enum WarehouseRequestType { CUSTOMER_FULFILLMENT STOCK_REPLENISHMENT }
+enum RequestStatus { PENDING PICKING READY PARTIALLY_DELIVERED DELIVERED CANCELLED }
+enum InventoryMovementType { PURCHASE SALE TRANSFER_IN TRANSFER_OUT CUSTOMER_FULFILLMENT RETURN ADJUSTMENT DAMAGE }
+enum TransferStatus { REQUESTED APPROVED SENT IN_TRANSIT RECEIVED CANCELLED }
+enum StockOwnerType { WAREHOUSE SALESPERSON }
+enum ApprovalType { DISCOUNT PRICE CREDIT_LIMIT STOCK_ADJUSTMENT SALE_CANCEL REPLENISHMENT }
+enum ApprovalStatus { PENDING APPROVED REJECTED }
+enum PurchaseStatus { DRAFT ORDERED PARTIALLY_RECEIVED RECEIVED CANCELLED }
+enum ExpensePaymentMethod { CASH BANK TELEBIRR OTHER }
+enum SubscriptionStatus { TRIAL ACTIVE PAST_DUE SUSPENDED CANCELLED EXPIRED }
+enum BillingCycle { MONTHLY YEARLY }
+enum ReturnStatus { REQUESTED APPROVED RECEIVED REJECTED }
+enum UserRole { ADMIN OWNER MANAGER SUPER_ADMIN SALESPERSON WAREHOUSE_WORKER }
+
+enum NotificationType { LOW_STOCK PENDING_APPROVAL CASH_VARIANCE SYNC_FAILURE }
+enum NotificationSeverity { INFO WARNING CRITICAL }
+
+model Tenant {
+  id String @id @default(uuid())
+  name String
+  businessCode String @unique
+  users User[]
+  roleAssignments UserRoleAssignment[]
+  locations Location[]
+  products Product[]
+  customers Customer[]
+  customerGroups CustomerGroup[]
+  priceLists PriceList[]
+  cashSessions CashSession[]
+  sales Sale[]
+  payments Payment[]
+  supplierPayments SupplierPayment[]
+  creditTransactions CreditTransaction[]
+  inventoryBalances InventoryBalance[]
+  inventoryMovements InventoryMovement[]
+  warehouseRequests WarehouseRequest[]
+  stockTransfers StockTransfer[]
+  approvals ApprovalRequest[]
+  suppliers Supplier[]
+  purchases Purchase[]
+  expenses Expense[]
+  salesReturns SalesReturn[]
+  subscriptions Subscription[]
+  auditLogs AuditLog[]
+  authSessions AuthSession[]
+  passwordResetTokens PasswordResetToken[]
+  notifications Notification[]
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  status String @default("ACTIVE")
+  salesSequence Int @default(0)
+  warehouseRequestSequence Int @default(0)
+  purchaseSequence Int @default(0)
+  returnSequence Int @default(0)
+  transferSequence Int @default(0)
+  subscriptionStatus SubscriptionStatus @default(TRIAL)
+  trialEndsAt DateTime?
+}
+
+model Plan {
+  id String @id @default(uuid())
+  code String @unique
+  name String
+  monthlyPrice Decimal @db.Decimal(18,2)
+  yearlyPrice Decimal @db.Decimal(18,2)
+  maxUsers Int?
+  maxSalesLocations Int?
+  maxWarehouses Int?
+  active Boolean @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  subscriptions Subscription[]
+}
+
+model Subscription {
+  id String @id @default(uuid())
+  tenantId String
+  tenant Tenant @relation(fields:[tenantId], references:[id], onDelete:Cascade)
+  planId String
+  plan Plan @relation(fields:[planId], references:[id])
+  status SubscriptionStatus @default(TRIAL)
+  billingCycle BillingCycle @default(MONTHLY)
+  startsAt DateTime
+  endsAt DateTime
+  trialEndsAt DateTime?
+  cancelledAt DateTime?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  @@index([tenantId, status])
+  @@index([endsAt])
+}
+
+
+model User {
+  id String @id @default(uuid())
+  tenantId String
+  tenant Tenant @relation(fields:[tenantId], references:[id], onDelete:Cascade)
+  name String
+  phone String
+  passwordHash String
+  role String
+  roleAssignments UserRoleAssignment[]
+  primaryLocationId String?
+  primaryLocation Location? @relation("PrimaryLocation", fields:[primaryLocationId], references:[id], onDelete:SetNull)
+  sales Sale[] @relation("SalespersonSales")
+  payments Payment[] @relation("ReceivedPayments")
+  movements InventoryMovement[] @relation("CreatedMovements")
+  purchases Purchase[] @relation("PurchaseCreatedBy")
+  expenses Expense[] @relation("ExpenseCreatedBy")
+  supplierPayments SupplierPayment[] @relation("SupplierPaymentReceivedBy")
+  cashSessions CashSession[] @relation("CashSessionOpenedBy")
+  approvedSalesReturns SalesReturn[] @relation("ReturnApprovedBy")
+  requests WarehouseRequest[] @relation("CreatedRequests")
+  transfers StockTransfer[] @relation("CreatedTransfers")
+  receivedTransfers StockTransfer[] @relation("TransferRecipient")
+  approvalsRequested ApprovalRequest[] @relation("ApprovalRequester")
+  approvalsResolved ApprovalRequest[] @relation("ApprovalResolver")
+  auditLogs AuditLog[] @relation("AuditActor")
+  authSessions AuthSession[]
+  notifications Notification[] @relation("UserNotifications")
+  status String @default("ACTIVE")
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  @@unique([tenantId, phone])
+  @@unique([tenantId, id])
+  @@index([tenantId, role])
+}
+
+model UserRoleAssignment {
+  id String @id @default(uuid())
+  tenantId String
+  tenant Tenant @relation(fields:[tenantId], references:[id], onDelete:Cascade)
+  userId String
+  user User @relation(fields:[tenantId, userId], references:[tenantId, id], onDelete:Cascade)
+  role UserRole
+  createdAt DateTime @default(now())
+
+  @@unique([userId, role])
+  @@index([tenantId, role])
+  @@index([userId])
+}
+
+
+model AuthSession {
+  id String @id @default(uuid())
+  tenantId String
+  tenant Tenant @relation(fields:[tenantId], references:[id], onDelete:Cascade)
+  userId String
+  user User @relation(fields:[tenantId, userId], references:[tenantId, id], onDelete:Cascade)
+  tokenJti String @unique
+  expiresAt DateTime
+  revokedAt DateTime?
+  ipAddress String?
+  userAgent String?
+  createdAt DateTime @default(now())
+  @@index([tenantId, userId, revokedAt])
+  @@index([expiresAt])
+}
+
+
+model PasswordResetToken {
+  id String @id @default(uuid())
+  tenantId String
+  tenant Tenant @relation(fields:[tenantId], references:[id], onDelete:Cascade)
+  userId String
+  user User @relation(fields:[tenantId, userId], references:[tenantId, id], onDelete:Cascade)
+  tokenHash String @unique
+  expiresAt DateTime
+  usedAt DateTime?
+  createdAt DateTime @default(now())
+  @@index([tenantId, userId, usedAt])
+  @@index([expiresAt])
+}
+
+
+model AuditLog {
+  id String @id @default(uuid())
+  tenantId String
+  tenant Tenant @relation(fields:[tenantId], references:[id], onDelete:Cascade)
+  actorUserId String
+  actor User @relation("AuditActor", fields:[tenantId, actorUserId], references:[tenantId, id], onDelete:Restrict)
+  action String
+  entityType String
+  entityId String?
+  metadata Json?
+  createdAt DateTime @default(now())
+  @@index([tenantId, createdAt])
+  @@index([tenantId, entityType, entityId])
+  @@index([tenantId, actorUserId, createdAt])
+}
+
+model Notification {
+  id String @id @default(uuid())
+  tenantId String
+  tenant Tenant @relation(fields:[tenantId], references:[id], onDelete:Cascade)
+  userId String
+  user User @relation("UserNotifications", fields:[tenantId, userId], references:[tenantId, id], onDelete:Cascade)
+  type NotificationType
+  severity NotificationSeverity @default(INFO)
+  title String
+  message String
+  entityType String?
+  entityId String?
+  dedupeKey String
+  readAt DateTime?
+  deliveredAt DateTime?
+  acknowledgedAt DateTime?
+  expiresAt DateTime?
+  createdAt DateTime @default(now())
+
+  @@unique([tenantId, userId, dedupeKey])
+  @@index([tenantId, userId, readAt, createdAt])
+  @@index([tenantId, userId, expiresAt])
+  @@index([tenantId, type, createdAt])
+}
+
+model Location {
+  id String @id @default(uuid())
+  tenantId String
+  tenant Tenant @relation(fields:[tenantId], references:[id], onDelete:Cascade)
+  name String
+  code String
+  type LocationType
+  preferredWarehouseId String?
+  status Boolean @default(true)
+  primaryUsers User[] @relation("PrimaryLocation")
+  inventory InventoryBalance[]
+  sales Sale[]
+  incomingTransfers StockTransfer[] @relation("TransferDestination")
+  outgoingTransfers StockTransfer[] @relation("TransferSource")
+  warehouseRequests WarehouseRequest[]
+  purchases Purchase[] @relation("WarehousePurchases")
+  cashSessions CashSession[]
+  createdAt DateTime @default(now())
+  @@unique([tenantId, code])
+}
+
+model Product {
+  id String @id @default(uuid())
+  tenantId String
+  tenant Tenant @relation(fields:[tenantId], references:[id], onDelete:Cascade)
+  name String
+  sku String
+  barcode String?
+  costPrice Decimal @db.Decimal(18,2)
+  sellingPrice Decimal @db.Decimal(18,2)
+  minimumStock Decimal @db.Decimal(18,3) @default(0)
+  targetStock Decimal @db.Decimal(18,3) @default(0)
+  active Boolean @default(true)
+  saleItems SaleItem[]
+  priceListItems PriceListItem[]
+  inventory InventoryBalance[]
+  movements InventoryMovement[]
+  warehouseItems WarehouseRequestItem[]
+  transferItems StockTransferItem[]
+  purchaseItems PurchaseItem[]
+  saleReturnItems SalesReturnItem[]
+  @@unique([tenantId, sku])
+  @@index([tenantId, name])
+  @@index([tenantId, barcode])
+}
+
+model Customer {
+  id String @id @default(uuid())
+  tenantId String
+  tenant Tenant @relation(fields:[tenantId], references:[id], onDelete:Cascade)
+  name String
+  phone String?
+  creditLimit Decimal @db.Decimal(18,2) @default(0)
+  currentBalance Decimal @db.Decimal(18,2) @default(0)
+  customerGroupId String?
+  customerGroup CustomerGroup? @relation(fields:[customerGroupId], references:[id], onDelete:SetNull)
+  active Boolean @default(true)
+  sales Sale[]
+  payments Payment[]
+  creditTransactions CreditTransaction[]
+  warehouseRequests WarehouseRequest[]
+  salesReturns SalesReturn[]
+  createdAt DateTime @default(now())
+  @@index([tenantId, name])
+  @@index([tenantId, phone])
+  @@index([tenantId, active, currentBalance])
+}
+
+model InventoryBalance {
+  id String @id @default(uuid())
+  tenantId String
+  tenant Tenant @relation(fields:[tenantId], references:[id], onDelete:Cascade)
+  productId String
+  product Product @relation(fields:[productId], references:[id], onDelete:Cascade)
+  locationId String
+  location Location @relation(fields:[locationId], references:[id], onDelete:Cascade)
+  ownerType StockOwnerType
+  ownerId String
+  quantity Decimal @db.Decimal(18,3) @default(0)
+  reservedQuantity Decimal @db.Decimal(18,3) @default(0)
+  availableQuantity Decimal @db.Decimal(18,3) @default(0)
+  updatedAt DateTime @updatedAt
+  @@unique([tenantId, productId, locationId, ownerType, ownerId])
+  @@index([tenantId, locationId, ownerType, ownerId])
+  @@index([tenantId, locationId, ownerType, productId])
+}
+
+model Sale {
+  id String @id @default(uuid())
+  tenantId String
+  tenant Tenant @relation(fields:[tenantId], references:[id], onDelete:Cascade)
+  saleNumber String
+  customerId String
+  customer Customer @relation(fields:[customerId], references:[id])
+  salesLocationId String
+  salesLocation Location @relation(fields:[salesLocationId], references:[id])
+  salespersonId String
+  salesperson User @relation("SalespersonSales", fields:[salespersonId], references:[id])
+  subtotal Decimal @db.Decimal(18,2)
+  discount Decimal @db.Decimal(18,2) @default(0)
+  tax Decimal @db.Decimal(18,2) @default(0)
+  grandTotal Decimal @db.Decimal(18,2)
+  paidAmount Decimal @db.Decimal(18,2) @default(0)
+  creditAmount Decimal @db.Decimal(18,2) @default(0)
+  status SaleStatus @default(DRAFT)
+  items SaleItem[]
+  payments Payment[]
+  warehouseRequests WarehouseRequest[]
+  salesReturns SalesReturn[]
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  @@unique([tenantId, saleNumber])
+  @@index([tenantId, customerId, createdAt])
+  @@index([tenantId, createdAt, salesLocationId])
+  @@index([tenantId, createdAt, salespersonId])
+}
+
+model SaleItem {
+  id String @id @default(uuid())
+  saleId String
+  sale Sale @relation(fields:[saleId], references:[id], onDelete:Cascade)
+  productId String
+  product Product @relation(fields:[productId], references:[id])
+  requestedQuantity Decimal @db.Decimal(18,3)
+  salespersonQuantity Decimal @db.Decimal(18,3)
+  warehouseQuantity Decimal @db.Decimal(18,3)
+  unitPrice Decimal @db.Decimal(18,2)
+  unitCost Decimal @db.Decimal(18,2)
+  lineTotal Decimal @db.Decimal(18,2)
+  @@index([saleId])
+}
+
+model Payment {
+  id String @id @default(uuid())
+  tenantId String
+  tenant Tenant @relation(fields:[tenantId], references:[id], onDelete:Cascade)
+  saleId String?
+  sale Sale? @relation(fields:[saleId], references:[id], onDelete:SetNull)
+  customerId String
+  customer Customer @relation(fields:[customerId], references:[id])
+  amount Decimal @db.Decimal(18,2)
+  method PaymentMethod
+  referenceNumber String?
+  receivedById String
+  receivedBy User @relation("ReceivedPayments", fields:[receivedById], references:[id])
+  cashSessionId String?
+  cashSession CashSession? @relation("CashSessionPayments", fields:[tenantId, cashSessionId], references:[tenantId, id], onDelete:Restrict)
+  createdAt DateTime @default(now())
+  @@index([tenantId, customerId, createdAt])
+  @@index([tenantId, cashSessionId])
+  @@index([tenantId, createdAt, saleId])
+}
+
+model CreditTransaction {
+  id String @id @default(uuid())
+  tenantId String
+  tenant Tenant @relation(fields:[tenantId], references:[id], onDelete:Cascade)
+  customerId String
+  customer Customer @relation(fields:[customerId], references:[id])
+  type String
+  amount Decimal @db.Decimal(18,2)
+  referenceType String?
+  referenceId String?
+  description String?
+  createdAt DateTime @default(now())
+  @@index([tenantId, customerId, createdAt])
+}
+
+model InventoryMovement {
+  id String @id @default(uuid())
+  tenantId String
+  tenant Tenant @relation(fields:[tenantId], references:[id], onDelete:Cascade)
+  productId String
+  product Product @relation(fields:[productId], references:[id])
+  locationId String
+  location Location @relation(fields:[locationId], references:[id])
+  userId String?
+  createdBy User? @relation("CreatedMovements", fields:[userId], references:[id])
+  type InventoryMovementType
+  quantity Decimal @db.Decimal(18,3)
+  referenceType String?
+  referenceId String?
+  createdAt DateTime @default(now())
+  @@index([tenantId, productId, createdAt])
+}
+
+model WarehouseRequest {
+  id String @id @default(uuid())
+  tenantId String
+  tenant Tenant @relation(fields:[tenantId], references:[id], onDelete:Cascade)
+  requestNumber String
+  requestType WarehouseRequestType
+  saleId String?
+  sale Sale? @relation(fields:[saleId], references:[id], onDelete:SetNull)
+  customerId String?
+  customer Customer? @relation(fields:[customerId], references:[id])
+  salesLocationId String
+  salesLocation Location @relation(fields:[salesLocationId], references:[id])
+  warehouseId String
+  status RequestStatus @default(PENDING)
+  pickupCodeHash String?
+  pickupCodeLast4 String?
+  pickupCodeExpiresAt DateTime?
+  pickupCodeUsedAt DateTime?
+  pickupCodeAttempts Int @default(0)
+  createdById String
+  createdBy User @relation("CreatedRequests", fields:[createdById], references:[id])
+  items WarehouseRequestItem[]
+  createdAt DateTime @default(now())
+  completedAt DateTime?
+  @@unique([tenantId, requestNumber])
+  @@index([tenantId, requestType, status])
+  @@index([tenantId, pickupCodeHash])
+}
+
+model WarehouseRequestItem {
+  id String @id @default(uuid())
+  warehouseRequestId String
+  warehouseRequest WarehouseRequest @relation(fields:[warehouseRequestId], references:[id], onDelete:Cascade)
+  productId String
+  product Product @relation(fields:[productId], references:[id])
+  requestedQuantity Decimal @db.Decimal(18,3)
+  pickedQuantity Decimal @db.Decimal(18,3) @default(0)
+  deliveredQuantity Decimal @db.Decimal(18,3) @default(0)
+  @@index([warehouseRequestId])
+}
+
+model StockTransfer {
+  id String @id @default(uuid())
+  tenantId String
+  tenant Tenant @relation(fields:[tenantId], references:[id], onDelete:Cascade)
+  transferNumber String
+  fromLocationId String
+  fromLocation Location @relation("TransferSource", fields:[fromLocationId], references:[id])
+  toLocationId String
+  toLocation Location @relation("TransferDestination", fields:[toLocationId], references:[id])
+  recipientUserId String?
+  recipientUser User? @relation("TransferRecipient", fields:[recipientUserId], references:[id], onDelete:SetNull)
+  status TransferStatus @default(REQUESTED)
+  createdById String
+  createdBy User @relation("CreatedTransfers", fields:[createdById], references:[id])
+  items StockTransferItem[]
+  createdAt DateTime @default(now())
+  sentAt DateTime?
+  receivedAt DateTime?
+  @@unique([tenantId, transferNumber])
+}
+
+model StockTransferItem {
+  id String @id @default(uuid())
+  stockTransferId String
+  stockTransfer StockTransfer @relation(fields:[stockTransferId], references:[id], onDelete:Cascade)
+  productId String
+  product Product @relation(fields:[productId], references:[id])
+  requestedQuantity Decimal @db.Decimal(18,3)
+  sentQuantity Decimal @db.Decimal(18,3) @default(0)
+  receivedQuantity Decimal @db.Decimal(18,3) @default(0)
+}
+
+model Expense {
+  id String @id @default(uuid())
+  tenantId String
+  tenant Tenant @relation(fields:[tenantId], references:[id], onDelete:Cascade)
+  category String
+  description String?
+  amount Decimal @db.Decimal(18,2)
+  method ExpensePaymentMethod
+  referenceNumber String?
+  createdById String
+  createdBy User @relation("ExpenseCreatedBy", fields:[createdById], references:[id])
+  cashSessionId String?
+  cashSession CashSession? @relation(fields:[cashSessionId], references:[id], onDelete:SetNull)
+  createdAt DateTime @default(now())
+  @@index([tenantId, createdAt])
+  @@index([tenantId, category])
+}
+
+model SalesReturn {
+  id String @id @default(uuid())
+  tenantId String
+  tenant Tenant @relation(fields:[tenantId], references:[id], onDelete:Cascade)
+  returnNumber String
+  saleId String
+  sale Sale @relation(fields:[saleId], references:[id])
+  customerId String
+  customer Customer @relation(fields:[customerId], references:[id])
+  locationId String
+  location Location @relation(fields:[locationId], references:[id])
+  status ReturnStatus @default(REQUESTED)
+  reason String?
+  refundAmount Decimal @db.Decimal(18,2) @default(0)
+  creditAmount Decimal @db.Decimal(18,2) @default(0)
+  approvedById String?
+  approvedBy User? @relation("ReturnApprovedBy", fields:[approvedById], references:[id], onDelete:SetNull)
+  items SalesReturnItem[]
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  @@unique([tenantId, returnNumber])
+  @@index([tenantId, saleId])
+  @@index([tenantId, customerId, createdAt])
+  @@index([tenantId, locationId, createdAt])
+}
+
+model SalesReturnItem {
+  id String @id @default(uuid())
+  salesReturnId String
+  salesReturn SalesReturn @relation(fields:[salesReturnId], references:[id], onDelete:Cascade)
+  productId String
+  product Product @relation(fields:[productId], references:[id])
+  quantity Decimal @db.Decimal(18,3)
+  unitPrice Decimal @db.Decimal(18,2)
+  unitCost Decimal @db.Decimal(18,2)
+  lineTotal Decimal @db.Decimal(18,2)
+  @@index([salesReturnId])
+}
+
+
+model CustomerGroup {
+  id          String      @id @default(uuid())
+  tenantId    String
+  tenant      Tenant      @relation(fields:[tenantId], references:[id], onDelete:Cascade)
+  name        String
+  description String?
+  customers   Customer[]
+  priceListId String?
+  priceList   PriceList?  @relation(fields:[priceListId], references:[id], onDelete:SetNull)
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
+  @@unique([tenantId, name])
+}
+
+model PriceList {
+  id          String          @id @default(uuid())
+  tenantId    String
+  tenant      Tenant          @relation(fields:[tenantId], references:[id], onDelete:Cascade)
+  name        String
+  active      Boolean         @default(true)
+  items       PriceListItem[]
+  groups      CustomerGroup[]
+  createdAt   DateTime        @default(now())
+  updatedAt   DateTime        @updatedAt
+  @@unique([tenantId, name])
+}
+
+model PriceListItem {
+  id          String    @id @default(uuid())
+  priceListId String
+  priceList   PriceList @relation(fields:[priceListId], references:[id], onDelete:Cascade)
+  productId   String
+  product     Product   @relation(fields:[productId], references:[id], onDelete:Cascade)
+  sellingPrice Decimal  @db.Decimal(18,2)
+  @@unique([priceListId, productId])
+}
+
+model Supplier {
+  id            String      @id @default(uuid())
+  tenantId      String
+  tenant        Tenant      @relation(fields:[tenantId], references:[id], onDelete:Cascade)
+  name          String
+  phone         String?
+  address       String?
+  contactPerson String?
+  balance       Decimal     @db.Decimal(18,2) @default(0)
+  active        Boolean     @default(true)
+  purchases     Purchase[]
+  payments      SupplierPayment[]
+  createdAt     DateTime    @default(now())
+  updatedAt     DateTime    @updatedAt
+  @@index([tenantId, name])
+}
+
+model SupplierPayment {
+  id              String               @id @default(uuid())
+  tenantId        String
+  tenant          Tenant               @relation(fields:[tenantId], references:[id], onDelete:Cascade)
+  supplierId      String
+  supplier        Supplier             @relation(fields:[supplierId], references:[id], onDelete:Cascade)
+  amount          Decimal              @db.Decimal(18,2)
+  method          ExpensePaymentMethod
+  referenceNumber String?
+  receivedById    String
+  receivedBy      User                 @relation("SupplierPaymentReceivedBy", fields:[receivedById], references:[id])
+  cashSessionId   String?
+  cashSession     CashSession?        @relation("CashSessionSupplierPayments", fields:[tenantId, cashSessionId], references:[tenantId, id], onDelete:Restrict)
+  createdAt       DateTime             @default(now())
+  @@index([tenantId, supplierId, createdAt])
+  @@index([tenantId, cashSessionId])
+}
+
+model Purchase {
+  id            String         @id @default(uuid())
+  tenantId      String
+  tenant        Tenant         @relation(fields:[tenantId], references:[id], onDelete:Cascade)
+  purchaseNumber String
+  supplierId    String
+  supplier      Supplier       @relation(fields:[supplierId], references:[id])
+  warehouseId   String
+  warehouse     Location       @relation("WarehousePurchases", fields:[warehouseId], references:[id])
+  status        PurchaseStatus @default(RECEIVED)
+  subtotal      Decimal        @db.Decimal(18,2)
+  discount      Decimal        @db.Decimal(18,2) @default(0)
+  tax           Decimal        @db.Decimal(18,2) @default(0)
+  grandTotal    Decimal        @db.Decimal(18,2)
+  paidAmount   Decimal         @db.Decimal(18,2) @default(0)
+  creditAmount Decimal         @db.Decimal(18,2) @default(0)
+  createdById   String
+  createdBy     User           @relation("PurchaseCreatedBy", fields:[createdById], references:[id])
+  items         PurchaseItem[]
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+  @@unique([tenantId, purchaseNumber])
+  @@index([tenantId, supplierId, createdAt])
+}
+
+model PurchaseItem {
+  id               String   @id @default(uuid())
+  purchaseId       String
+  purchase         Purchase @relation(fields:[purchaseId], references:[id], onDelete:Cascade)
+  productId        String
+  product          Product  @relation(fields:[productId], references:[id])
+  orderedQuantity  Decimal  @db.Decimal(18,3)
+  receivedQuantity Decimal  @db.Decimal(18,3) @default(0)
+  unitCost         Decimal  @db.Decimal(18,2)
+  lineTotal        Decimal  @db.Decimal(18,2)
+  @@index([purchaseId])
+}
+
+model CashSession {
+  id             String   @id @default(uuid())
+  tenantId       String
+  tenant         Tenant   @relation(fields:[tenantId], references:[id], onDelete:Cascade)
+  locationId     String
+  location       Location @relation(fields:[locationId], references:[id])
+  openedById     String
+  openedBy       User     @relation("CashSessionOpenedBy", fields:[openedById], references:[id])
+  openedAt       DateTime @default(now())
+  openingCash    Decimal  @db.Decimal(18,2) @default(0)
+  closingCash    Decimal? @db.Decimal(18,2)
+  countedCash    Decimal? @db.Decimal(18,2)
+  variance       Decimal? @db.Decimal(18,2)
+  closedAt       DateTime?
+  status         String   @default("OPEN")
+  cashPayments Payment[] @relation("CashSessionPayments")
+  cashSupplierPayments SupplierPayment[] @relation("CashSessionSupplierPayments")
+  @@unique([tenantId, id])
+  @@index([tenantId, locationId, openedAt])
+  @@index([tenantId, status, closedAt])
+}
+
+model ApprovalRequest {
+  id String @id @default(uuid())
+  tenantId String
+  tenant Tenant @relation(fields:[tenantId], references:[id], onDelete:Cascade)
+  type ApprovalType
+  status ApprovalStatus @default(PENDING)
+  referenceType String
+  referenceId String
+  reason String?
+  requestedValue Json?
+  requestedById String
+  requestedBy User @relation("ApprovalRequester", fields:[requestedById], references:[id])
+  resolvedById String?
+  resolvedBy User? @relation("ApprovalResolver", fields:[resolvedById], references:[id], onDelete:SetNull)
+  resolvedAt DateTime?
+  createdAt DateTime @default(now())
+  @@index([tenantId, status, createdAt])
+  @@index([tenantId, referenceType, referenceId])
+}
+
+enum SyncOperationStatus { PROCESSING SUCCEEDED FAILED }
+
+model SyncOperation {
+  id String @id @default(uuid())
+  tenantId String
+  operationKey String
+  operationType String
+  status SyncOperationStatus @default(PROCESSING)
+  requestHash String
+  requestPayload Json
+  resultPayload Json?
+  errorMessage String?
+  processingToken String?
+  leaseExpiresAt DateTime?
+  createdAt DateTime @default(now())
+  completedAt DateTime?
+
+  @@unique([tenantId, operationKey])
+  @@index([tenantId, createdAt])
+  @@index([tenantId, status])
+  @@index([tenantId, status, createdAt])
+  @@index([tenantId, leaseExpiresAt])
+}
