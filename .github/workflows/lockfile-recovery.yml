@@ -31,7 +31,7 @@ jobs:
         run: npm ci --ignore-scripts --no-audit --no-fund
       - name: Commit candidate lockfile
         run: |
-          if git diff --quiet -- backend/package-lock.json; then
+          if git diff --quiet -- backend/package-lock.json && git ls-files --error-unmatch backend/package-lock.json >/dev/null 2>&1; then
             echo "No lockfile change to commit."
             exit 0
           fi
