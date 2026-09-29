@@ -49,7 +49,8 @@ jobs:
         working-directory: backend
         run: |
           npm audit --json > .release/npm-audit-v93.json || test $? -eq 1
-          node -e "const a=require('./.release/npm-audit-v93.json'); for (const v of Object.values(a.vulnerabilities||{})) console.log(v.name+' '+v.severity+' via '+(v.via||[]).map(x=>typeof x==='string'?x:x.title||x.name).join(', '))"
+          npm audit --omit=dev --json > .release/npm-audit-runtime-v93.json || test $? -eq 1
+          node -e "const a=require('./.release/npm-audit-runtime-v93.json'); for (const v of Object.values(a.vulnerabilities||{})) console.log(v.name+' '+v.severity)"
       - name: Record audit evidence
         working-directory: backend
         run: npm run release:provenance:v93
