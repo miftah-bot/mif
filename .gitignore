@@ -1,0 +1,29 @@
+# Environment and secrets
+.env
+.env.*
+!.env.example
+!.env.docker.example
+!.env.production.example
+*.pem
+*.key
+*.crt
+
+# Node
+node_modules/
+npm-debug.log*
+
+# Flutter/Dart
+.dart_tool/
+.flutter-plugins
+.flutter-plugins-dependencies
+.packages
+build/
+
+# Local runtime state
+postgres_data/
+coverage/
+
+# Backend generated output
+backend/dist/
+backend/.release/*.json
+backend/release-attestation.json
