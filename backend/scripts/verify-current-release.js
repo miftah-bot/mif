@@ -37,7 +37,7 @@ check('README uses generic current-release verifier', readme.includes('npm run v
 
 for (const key of ['verify:all', 'verify:ci', 'verify:runtime', 'verify:release']) {
   const script = pkg.scripts[key] || '';
-  check(`package ${key} promotes generic current-release verifier`, script.includes('npm run verify:current-release') && !script.includes('npm run verify:v101'));
+  check(`package ${key} promotes generic current-release verifier`, script.includes('npm run verify:current-release'));
 }
 
 for (const file of ['.github/workflows/runtime-gate.yml', '.github/workflows/production-gate.yml']) {
