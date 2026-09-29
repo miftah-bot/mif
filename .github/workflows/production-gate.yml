@@ -10,10 +10,9 @@ on:
 
 permissions:
   contents: read
+  actions: read
 
 # Current release disposable/restore DB namespaces are enforced by the release verifier.
-
-  actions: read
 
 concurrency:
   group: production-gate-${{ github.ref }}
