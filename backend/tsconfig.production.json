@@ -1,0 +1,14 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "noEmit": true,
+    "skipLibCheck": true,
+    "types": [],
+    "moduleResolution": "node",
+    "allowJs": false
+  },
+  "include": [
+    "src/**/*.ts",
+    "production-shims.d.ts"
+  ]
+}
