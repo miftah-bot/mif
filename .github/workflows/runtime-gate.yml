@@ -1,4 +1,5 @@
 name: runtime-gate
+# V104 runtime gate: release contract + backend + mobile evidence.
 
 on:
   workflow_dispatch:
