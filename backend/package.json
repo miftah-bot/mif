@@ -18,7 +18,13 @@
     "verify:ci": "npm run verify:current-release && npm run verify:v104",
     "verify:runtime": "npm run verify:current-release && npm run verify:v104 && npm run build && npm test",
     "verify:release": "npm run verify:current-release && npm run verify:v104 && npm run build && npm test && npm run verify:lockfile:committed",
-    "verify:dependencies": "node scripts/verify-dependency-contract.js"
+    "verify:dependencies": "node scripts/verify-dependency-contract.js",
+    "security:static": "node scripts/verify-v93-static-only.js",
+    "security:sbom": "npm sbom --sbom-format=cyclonedx --sbom-type=application",
+    "security:audit": "npm audit --audit-level=high",
+    "release:provenance:v93": "node scripts/generate-v93-security-provenance.js",
+    "verify:provenance:v93": "node scripts/verify-v93-security-provenance.js",
+    "verify:v93": "node scripts/verify-v93-security-audit.js"
   },
   "dependencies": {
     "@nestjs/common": "^11.0.0",
