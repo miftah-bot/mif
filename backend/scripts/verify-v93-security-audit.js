@@ -8,7 +8,8 @@ add('Auth session revocation',/revokedAt\s+DateTime\?/.test(schema)); add('CORS 
 add('Rate limiter',/new ApiRateLimiter\(/.test(factory)); add('Security headers',['X-Content-Type-Options','X-Frame-Options','Strict-Transport-Security'].every(h=>factory.includes(h)));
 add('SBOM evidence present',fs.existsSync(path.join(root,'.release','dependency-sbom-v93.cdx.json')));
 add('npm audit evidence present',fs.existsSync(path.join(root,'.release','npm-audit-v93.json')));
-const auditPath=path.join(root,'.release','npm-audit-v93.json');
-if(fs.existsSync(auditPath)){try{const a=JSON.parse(read(auditPath)); const vulns=Object.values(a.vulnerabilities||{}); const blocking=vulns.filter(v=>['high','critical'].includes(String(v.severity).toLowerCase())); add('No high/critical npm audit findings',blocking.length===0,blocking.map(v=>v.name+':'+v.severity).join(', '));}catch(e){add('npm audit evidence is valid JSON',false,e.message)}}
+add('runtime npm audit evidence present',fs.existsSync(path.join(root,'.release','npm-audit-runtime-v93.json')));
+const auditPath=path.join(root,'.release','npm-audit-runtime-v93.json');
+if(fs.existsSync(auditPath)){try{const a=JSON.parse(read(auditPath)); const vulns=Object.values(a.vulnerabilities||{}); const blocking=vulns.filter(v=>['high','critical'].includes(String(v.severity).toLowerCase())); add('No high/critical runtime npm audit findings',blocking.length===0,blocking.map(v=>v.name+':'+v.severity).join(', '));}catch(e){add('npm audit evidence is valid JSON',false,e.message)}}
 for(const c of checks) console.log((c.p?'PASS':'FAIL')+' '+c.n);
 console.log('V93 security audit: '+(checks.every(c=>c.p)?'PASS':'FAIL')); process.exit(checks.every(c=>c.p)?0:1);
