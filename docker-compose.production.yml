@@ -1,0 +1,68 @@
+services:
+  postgres:
+    image: postgres:16
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  migrator:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+      target: migrator
+    restart: "no"
+    environment:
+      NODE_ENV: production
+      DATABASE_URL: ${DATABASE_URL}
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  api:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    environment:
+      NODE_ENV: production
+      PORT: 3000
+      DATABASE_URL: ${DATABASE_URL}
+      JWT_ACCESS_SECRET: ${JWT_ACCESS_SECRET}
+      JWT_ISSUER: ${JWT_ISSUER}
+      JWT_AUDIENCE: ${JWT_AUDIENCE}
+      APP_ORIGINS: ${APP_ORIGINS}
+      PLATFORM_ADMIN_KEY: ${PLATFORM_ADMIN_KEY}
+      API_RATE_LIMIT_PER_WINDOW: ${API_RATE_LIMIT_PER_WINDOW:-240}
+      API_RATE_LIMIT_WINDOW_MS: ${API_RATE_LIMIT_WINDOW_MS:-60000}
+      API_RATE_LIMIT_MAX_KEYS: ${API_RATE_LIMIT_MAX_KEYS:-20000}
+      RECOVERY_DELIVERY_MODE: ${RECOVERY_DELIVERY_MODE:-webhook}
+      RECOVERY_DELIVERY_CHANNEL: ${RECOVERY_DELIVERY_CHANNEL:-sms}
+      RECOVERY_DELIVERY_WEBHOOK_URL: ${RECOVERY_DELIVERY_WEBHOOK_URL}
+      RECOVERY_DELIVERY_WEBHOOK_SECRET: ${RECOVERY_DELIVERY_WEBHOOK_SECRET}
+      RECOVERY_DELIVERY_TIMEOUT_MS: ${RECOVERY_DELIVERY_TIMEOUT_MS:-5000}
+      HEALTH_METRICS_KEY: ${HEALTH_METRICS_KEY}
+    depends_on:
+      postgres:
+        condition: service_healthy
+      migrator:
+        condition: service_completed_successfully
+    ports:
+      - "${API_PORT:-3000}:3000"
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:3000/api/v1/health/ready').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
+      interval: 15s
+      timeout: 5s
+      start_period: 25s
+      retries: 10
+
+volumes:
+  postgres_data:
