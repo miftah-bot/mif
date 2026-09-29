@@ -31,8 +31,8 @@ jobs:
           B4: 'EHxkOrcQJZPvve86ahDt4lZkVJ75mLioBHaZo0qluLcr9lALPgjsKNZHkJ3eiqpcrNKCKLLdTJo6MxEyJyIOoi99wY9haOpMdRYOLjiFcenENIq8daNodv7FOKhUd8ZvobIGdtdSMqVdFCHBhacK7vXCtp9rehgMI4Ybe+EZaQ3WG0+Tsi9ERGX0H3giYtPsW2DW8ckKttRZr3PteeFqjogcQPL7QR7D0DO7R7JdqnJz6oQbaL3w1enMsv3aOtmZJVqTHr97pLPphN8WrXCdZLOWSliXYsMid3gKHgnoKfb0mhR4PoOiLDlNbgeTBS4DV28BVGCFhrBJL2asYJP/PxrSkaLyTVY3J3W45CSa243qcJzcF0kdpWmP4ezvnPTAMspCgM6blmEpjVUFTGitmrRpxlw1Rw32laA+GMdwNsjlDTeVE+umUzgafbGN5IP3xlPleQvxEEnge4g6l/rM4mEqnIJ/gzESKcqSuYVMYR6Tek1utAQYkTq996oK5z8b5gR8FaapGt6qTDdeBd6vc9QFe103fQNdmYR81dpzea21vEN87TXXCZEpCmGhi5ibPqp3p05ro6uauV7oLEXYETp42HREWDX+RGhnX/gm3M7uqhtzuR6ZdEUOHhld6MbH91acpuzuDl/8zPYnSQGE/Tamb1VfqrnCN2o2wwnuV6WG7XM7JydaTZ4aHKoJy6zqzHFC0nCciLpkuQnkqGS6uXCgOphAvhVxr2IdnuIkhcoJ6gTaHOncDassi6RzYNGVeLtBkCVhICGsPAoRAtFVcfL7XFsASDblkelobhXjrJtoO1FwB1UlljKDJx+cvhms/8DMjWKdIwq3WEmxldyVJdxxZQejNwLEjGzuu6EFSM4xvld8pU13p9XdN0KtpQPeaEoT'
           B5: 'aDAR4mPvVJWZHa7fbusjGWWQEZIENiUvRFomIsTJz9BUCIObeMhVY/fEw67kG8rXq1IhhbgT7TQvmiVtO5WYdXvnuORia68BqQUfyRDmnC217uOMN7cWYiZYfHqTsNr0zlHLlFod/OQGFTvxjfsnoBp/JlLkC7YTTjosdVxxRZxN7D0+feBRpQ848hJLnqVrtVvsKcG+1k0yAudet3Uv9a/FfdOn63qOwRzJQ0fdrq+Vif/dzcNMsV3XVtBZMAXKlRvGj2/ODNMGloOumJxTJ8LU8gss1NJGqPRXJ6nUFySpzdcgqYLvPlKZLzxSq9s6VILgKnF8/kr5ok2XwD67vHiL/1wLfhR/bt7eXKgXtqNZcNmGPqFv5vGTC/XDhw/o31v1d/UG/i3u/+BPGXJPrtR+o76DY90ubcMEto0+4i8+u1Bv0MA3xcg3v6vv1XcHH/o9HG9hzdHPJL5Q36MB3xcDFkc8mx+9B/549j+K9TM32nQAAA=='
         run: |
-          SCHEMA_GZ_B64='$S0$S1$S2$S3$S4$S5$S6'
-          BASELINE_GZ_B64='$B0$B1$B2$B3$B4$B5'
+          SCHEMA_GZ_B64="$S0$S1$S2$S3$S4$S5$S6"
+          BASELINE_GZ_B64="$B0$B1$B2$B3$B4$B5"
           mkdir -p backend/prisma/migrations/20260916000100_production_baseline
           printf '%s' "$SCHEMA_GZ_B64" | base64 -d | gzip -d > backend/prisma/schema.prisma
           printf '%s' "$BASELINE_GZ_B64" | base64 -d | gzip -d > backend/prisma/migrations/20260916000100_production_baseline/migration.sql
