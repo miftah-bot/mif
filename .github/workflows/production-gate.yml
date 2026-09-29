@@ -10,6 +10,9 @@ on:
 
 permissions:
   contents: read
+
+# Current release disposable/restore DB namespaces are enforced by the release verifier.
+
   actions: read
 
 concurrency:
@@ -30,6 +33,9 @@ jobs:
       - name: Verify current release contract
         working-directory: backend
         run: npm run verify:current-release
+        env:
+          RELEASE_DB_NAMESPACE: distributor_platform_test_v104
+          RELEASE_RESTORE_DB_NAMESPACE: distributor_restore_smoke_v104
 
   production-config:
     if: ${{ github.event_name != 'workflow_run' }}
