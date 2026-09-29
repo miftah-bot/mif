@@ -25,7 +25,8 @@
     "release:provenance:v93": "node scripts/generate-v93-security-provenance.js",
     "verify:provenance:v93": "node scripts/verify-v93-security-provenance.js",
     "verify:v93": "node scripts/verify-v93-security-audit.js",
-    "verify:security-runtime": "node scripts/verify-v93-security-audit.js"
+    "verify:security-runtime": "node scripts/verify-v93-security-audit.js",
+    "verify:security-static": "npm run security:static"
   },
   "dependencies": {
     "@nestjs/common": "^11.0.0",
