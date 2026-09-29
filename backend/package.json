@@ -27,7 +27,8 @@
     "verify:v93": "node scripts/verify-v93-security-audit.js",
     "verify:security-runtime": "node scripts/verify-v93-security-audit.js",
     "verify:security-static": "npm run security:static",
-    "verify:security-provenance": "npm run verify:provenance:v93"
+    "verify:security-provenance": "npm run verify:provenance:v93",
+    "preflight:production": "node scripts/preflight-production.js"
   },
   "dependencies": {
     "@nestjs/common": "^11.0.0",
