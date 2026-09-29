@@ -96,7 +96,7 @@ jobs:
           PROMOTION_RUN_ID: ${{ github.event.workflow_run.id }}
           PROMOTION_HEAD_SHA: ${{ github.event.workflow_run.head_sha }}
           PROMOTION_CONCLUSION: ${{ github.event.workflow_run.conclusion }}
-          RUNTIME_CERT_ARTIFACT_ROOT: ../runtime-cert-artifact
+          RUNTIME_CERT_ARTIFACT_ROOT: runtime-cert-artifact
         run: npm run verify:runtime-promotion
       - name: Verify tracked production lockfile at promoted commit
         run: git ls-files --error-unmatch backend/package-lock.json
